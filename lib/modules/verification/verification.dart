@@ -3,8 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:lost/constants.dart';
+import 'package:lost/modules/my_lost_mobiles/my-lost-mobiles.dart';
 import 'package:lost/provider/myProvider.dart';
-import 'package:lost/screens/my-lost-mobiles.dart';
+import 'package:lost/shared/components/components.dart';
 import 'package:provider/provider.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
@@ -19,20 +20,13 @@ class Verification extends StatefulWidget {
 
 class _VerificationState extends State<Verification> {
   @override
-  getSigncode()async{
+  getSigncode() async {
+    final signCode = await SmsAutoFill().getAppSignature;
 
-    final signCode =
-        await SmsAutoFill().getAppSignature;
-
-    print(
-        'prefill with a code : ${signCode} ');
+    print('prefill with a code : ${signCode} ');
   }
 
   void initState() {
-  getSigncode();
-
-    _submitPhoneNumber(
-       '+201099030517');
     listenOTP();
     super.initState();
   }
@@ -60,16 +54,19 @@ class _VerificationState extends State<Verification> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Center(
-                child: Text(
-                  'تم إرسال رمز تأكيد إلي رقم ${_modalRoute}'
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    'تم إرسال رمز تأكيد إلي رقم ${_modalRoute}'
 
-                  // '${widget.phoneNumber}'
-                  ,
-                  // 'تم إرسال رمز التأكيد الي رقم , رجاء ادخال الرمز',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
+                    // '${widget.phoneNumber}'
+                    ,
+                    // 'تم إرسال رمز التأكيد الي رقم , رجاء ادخال الرمز',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
                   ),
                 ),
               ),
@@ -94,14 +91,22 @@ class _VerificationState extends State<Verification> {
               CustomElevatedButton(
                 buttonName: 'إنهاء',
                 buttonColor: kButtonColor,
-                onClick: () async {
+                onClick: () {
                   Map<String, dynamic> data = {
                     'name': p.name,
                     'imei'.toUpperCase(): p.IMEI,
                     'mobile-model': p.phone_model,
                     'phoneNumber': p.Phone_Num
                   };
-                  await FirebaseFirestore.instance.collection('data').add(data);
+                  FirebaseFirestore.instance
+                      .collection('Users Data')
+                      .doc(p.IMEI)
+                      .set(data)
+                      .then((value) {
+                    print('ok');
+                  }).catchError((error) {
+                    print('Error is nnnnnnnnnnn ${error.toString()}');
+                  });
 
                   Navigator.pushNamed(context, LostMobiles.id,
                       arguments: listenOTP.toString());
@@ -117,10 +122,11 @@ class _VerificationState extends State<Verification> {
   void listenOTP() async {
     await SmsAutoFill().listenForCode;
   }
+
   Future<List> _submitPhoneNumber(String phoneNumber) async {
     /// NOTE: Either append your phone number country code or add in the code itself
     AuthCredential _phoneAuthCredential =
-    AuthCredential(providerId: '', signInMethod: '');
+        AuthCredential(providerId: '', signInMethod: '');
     String _verifectionId = '';
     print(phoneNumber);
 
@@ -143,7 +149,6 @@ class _VerificationState extends State<Verification> {
     void codeSent(dynamic verificationId, dynamic code) {
       _verifectionId = verificationId;
       print('تم ارسال رمز التحقق');
-
     }
 
     void codeAutoRetrievalTimeout(String verificationId) {
